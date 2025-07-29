@@ -1,0 +1,409 @@
+#!/usr/bin/env python3
+import os
+import sys
+import json
+import logging
+from pathlib import Path
+import app_store_connect_api as api
+
+# Change to the correct working directory
+SCRIPT_DIR = Path(__file__).parent.absolute()
+os.chdir(SCRIPT_DIR)
+
+# Get the absolute path for the log file
+LOG_FILE = SCRIPT_DIR / "logs" / "app_store_connect_server.log"
+
+# Ensure the log directory exists
+LOG_FILE.parent.mkdir(parents=True, exist_ok=True)
+
+# Set up logging
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler(LOG_FILE),
+        logging.StreamHandler(sys.stderr)
+    ]
+)
+
+# Log startup information
+logging.info(f"Script started at {os.getcwd()}")
+logging.info(f"Log file location: {LOG_FILE}")
+logging.info(f"Script location: {__file__}")
+
+def handle_initialize(message):
+    """Handle the initialize message from Cursor."""
+    return {
+        "jsonrpc": "2.0",
+        "id": message.get("id"),
+        "result": {
+            "protocolVersion": "2024-11-05",
+            "capabilities": {
+                "tools": {
+                    "enabled": True
+                }
+            },
+            "serverInfo": {
+                "name": "app-store-connect-services",
+                "version": "1.0.1"
+            }
+        }
+    }
+
+def handle_tools_list(message):
+    """Handle the tools/list message from Cursor."""
+    return {
+        "jsonrpc": "2.0",
+        "id": message.get("id"),
+        "result": {
+            "tools": [
+                {
+                    "name": "app-store-connect/list-apps",
+                    "description": "List all apps in App Store Connect",
+                    "inputSchema": {
+                        "type": "object",
+                        "properties": {}
+                    }
+                },
+                {
+                    "name": "app-store-connect/get-app-info",
+                    "description": "Get detailed information about an app",
+                    "inputSchema": {
+                        "type": "object",
+                        "properties": {
+                            "bundleId": {
+                                "type": "string",
+                                "description": "The bundle ID of the app"
+                            }
+                        },
+                        "required": ["bundleId"]
+                    }
+                },
+                {
+                    "name": "app-store-connect/list-beta-testers",
+                    "description": "List all beta testers in a specific group",
+                    "inputSchema": {
+                        "type": "object",
+                        "properties": {
+                            "groupId": {
+                                "type": "string",
+                                "description": "The ID of the beta group"
+                            }
+                        },
+                        "required": ["groupId"]
+                    }
+                },
+                {
+                    "name": "app-store-connect/list-beta-groups",
+                    "description": "List all beta groups for an app",
+                    "inputSchema": {
+                        "type": "object",
+                        "properties": {
+                            "bundleId": {
+                                "type": "string",
+                                "description": "The bundle ID of the app"
+                            }
+                        },
+                        "required": ["bundleId"]
+                    }
+                },
+                {
+                    "name": "app-store-connect/list-testers-in-group",
+                    "description": "List all beta testers in a specific group",
+                    "inputSchema": {
+                        "type": "object",
+                        "properties": {
+                            "groupId": {
+                                "type": "string",
+                                "description": "The ID of the beta group"
+                            }
+                        },
+                        "required": ["groupId"]
+                    }
+                },
+                {
+                    "name": "app-store-connect/list-builds",
+                    "description": "List all builds for an app",
+                    "inputSchema": {
+                        "type": "object",
+                        "properties": {
+                            "bundleId": {
+                                "type": "string",
+                                "description": "The bundle ID of the app"
+                            }
+                        },
+                        "required": ["bundleId"]
+                    }
+                },
+                {
+                    "name": "app-store-connect/submit-for-review",
+                    "description": "Submit an app version for review",
+                    "inputSchema": {
+                        "type": "object",
+                        "properties": {
+                            "bundleId": {
+                                "type": "string",
+                                "description": "The bundle ID of the app"
+                            },
+                            "version": {
+                                "type": "string",
+                                "description": "The version string to submit (e.g., '1.2.3')"
+                            }
+                        },
+                        "required": ["bundleId", "version"]
+                    }
+                },
+                {
+                    "name": "app-store-connect/create-beta-group",
+                    "description": "Create a new beta group",
+                    "inputSchema": {
+                        "type": "object",
+                        "properties": {
+                            "name": {
+                                "type": "string",
+                                "description": "The name of the beta group"
+                            },
+                            "bundleId": {
+                                "type": "string",
+                                "description": "The bundle ID of the app to create the group for"
+                            }
+                        },
+                        "required": ["name", "bundleId"]
+                    }
+                },
+                {
+                    "name": "app-store-connect/add-beta-tester-to-group",
+                    "description": "Add a beta tester to a group",
+                    "inputSchema": {
+                        "type": "object",
+                        "properties": {
+                            "email": {
+                                "type": "string",
+                                "description": "The tester's email address"
+                            },
+                            "groupId": {
+                                "type": "string",
+                                "description": "The ID of the beta group"
+                            }
+                        },
+                        "required": ["email", "groupId"]
+                    }
+                },
+                {
+                    "name": "app-store-connect/release-version",
+                    "description": "Release a new version of an app",
+                    "inputSchema": {
+                        "type": "object",
+                        "properties": {
+                            "bundleId": {
+                                "type": "string",
+                                "description": "The bundle ID of the app"
+                            },
+                            "version": {
+                                "type": "string",
+                                "description": "The version string to release (e.g., '1.2.3')"
+                            },
+                            "buildNumber": {
+                                "type": "string",
+                                "description": "The build number corresponding to the version"
+                            },
+                            "platform": {
+                                "type": "string",
+                                "description": "The platform of the app (e.g., 'IOS', 'MAC_OS'). Defaults to 'IOS'."
+                            }
+                        },
+                        "required": ["bundleId", "version", "buildNumber"]
+                    }
+                },
+                {
+                    "name": "app-store-connect/get-performance-metrics",
+                    "description": "Get performance metrics for an app",
+                    "inputSchema": {
+                        "type": "object",
+                        "properties": {
+                            "bundleId": {
+                                "type": "string",
+                                "description": "The bundle ID of the app"
+                            }
+                        },
+                        "required": ["bundleId"]
+                    }
+                }
+            ]
+        }
+    }
+
+def handle_tools_call(message):
+    """Handle the tools/call message from Cursor."""
+    params = message.get("params", {})
+    tool_name = params.get("name")
+    args = params.get("arguments", {})
+    
+    logging.info(f"Handling tool call for tool '{tool_name}' with args: {args}")
+
+    result = None
+    error = None
+
+    try:
+        if tool_name == "app-store-connect/list-apps":
+            result = api.list_apps()
+        elif tool_name == "app-store-connect/get-app-info":
+            result = api.get_app_info(bundle_id=args.get("bundleId"))
+        elif tool_name == "app-store-connect/list-beta-testers":
+            # Server-side workaround for client-side caching.
+            # The client might still send a bundleId, but we will prioritize the groupId.
+            group_id = args.get("groupId")
+            if not group_id:
+                # Fallback for older client definitions that might not have groupId
+                error = {"code": -32602, "message": "Invalid params: groupId is required."}
+            else:
+                result = api.list_testers_in_group(group_id=group_id)
+        elif tool_name == "app-store-connect/list-beta-groups":
+            result = api.list_beta_groups(bundle_id=args.get("bundleId"))
+        elif tool_name == "app-store-connect/list-testers-in-group":
+            result = api.list_testers_in_group(group_id=args.get("groupId"))
+        elif tool_name == "app-store-connect/list-builds":
+            result = api.list_builds(bundle_id=args.get("bundleId"))
+        elif tool_name == "app-store-connect/submit-for-review":
+            result = api.submit_for_review(bundle_id=args.get("bundleId"), version=args.get("version"))
+        elif tool_name == "app-store-connect/create-beta-group":
+            result = api.create_beta_group(name=args.get("name"), bundle_id=args.get("bundleId"))
+        elif tool_name == "app-store-connect/add-beta-tester-to-group":
+            result = api.add_beta_tester_to_group(email=args.get("email"), group_id=args.get("groupId"))
+        elif tool_name == "app-store-connect/release-version":
+            result = api.release_version(
+                bundle_id=args.get("bundleId"),
+                version_string=args.get("version"),
+                build_number=args.get("buildNumber"),
+                platform=args.get("platform", "IOS")
+            )
+        elif tool_name == "app-store-connect/get-performance-metrics":
+            result = api.get_performance_metrics(bundle_id=args.get("bundleId"))
+        else:
+            error = {
+                "code": -32601,
+                "message": f"Tool '{tool_name}' not found"
+            }
+    except Exception as e:
+        logging.error(f"Error calling tool {tool_name}: {e}", exc_info=True)
+        error = {
+            "code": -32600,
+            "message": f"Error executing tool '{tool_name}': {e}"
+        }
+
+    response = {
+        "jsonrpc": "2.0",
+        "id": message.get("id"),
+    }
+    if error:
+        response["error"] = error
+    else:
+        # The client expects the result to have a "content" key with an array of content blocks.
+        # We will format the JSON result as a string inside a "text" content block.
+        response["result"] = {
+            "content": [
+                {
+                    "type": "text",
+                    "text": json.dumps(result, indent=2)
+                }
+            ]
+        }
+        
+    return response
+
+def handle_notification(message):
+    """Handle notification messages from Cursor."""
+    # Notifications don't require a response
+    return None
+
+def read_message():
+    try:
+        # Read a line from stdin
+        line = sys.stdin.readline()
+        if not line:
+            logging.info("No input received")
+            return None
+            
+        logging.info(f"Raw input received: {repr(line)}")
+        return json.loads(line.strip())
+            
+    except Exception as e:
+        logging.error(f"Error reading message: {str(e)}", exc_info=True)
+        return None
+
+def write_message(message):
+    try:
+        # Convert message to JSON string
+        json_str = json.dumps(message)
+        sys.stdout.write(json_str + "\n")
+        sys.stdout.flush()
+        logging.info(f"Sent message: {repr(json_str)}")
+    except Exception as e:
+        logging.error(f"Error writing message: {str(e)}", exc_info=True)
+
+def main():
+    # Log basic environment info
+    logging.info("=== Environment Information ===")
+    logging.info(f"Python version: {sys.version}")
+    logging.info(f"Python executable: {sys.executable}")
+    logging.info(f"Current working directory: {os.getcwd()}")
+    logging.info(f"PYTHONPATH: {os.environ.get('PYTHONPATH', 'Not set')}")
+    logging.info(f"PATH: {os.environ.get('PATH', 'Not set')}")
+    
+    # Keep the connection alive and handle messages
+    logging.info("=== Starting message loop ===")
+    while True:
+        try:
+            # Read a message
+            logging.info("Waiting for input...")
+            message = read_message()
+            
+            if message:
+                method = message.get("method", "")
+                logging.info(f"Received method: {method}")
+                
+                response = None
+                # Handle the message based on its method
+                if method == "initialize":
+                    response = handle_initialize(message)
+                elif method == "tools/list":
+                    response = handle_tools_list(message)
+                elif method == "tools/call":
+                    response = handle_tools_call(message)
+                elif method and method.startswith("notifications/"):
+                    handle_notification(message)
+                elif "id" in message: # Only respond to requests, not notifications
+                    response = {
+                        "jsonrpc": "2.0",
+                        "id": message.get("id"),
+                        "error": {
+                            "code": -32601,
+                            "message": f"Method '{method}' not found"
+                        }
+                    }
+                
+                if response:
+                    write_message(response)
+            else:
+                logging.warning("No valid message received, exiting loop.")
+                break
+            
+        except Exception as e:
+            logging.error(f"Error during message handling: {str(e)}", exc_info=True)
+            # Try to send an error response if possible
+            if 'message' in locals() and message and 'id' in message:
+                error_response = {
+                    "jsonrpc": "2.0",
+                    "id": message.get("id"),
+                    "error": {
+                        "code": -32000,
+                        "message": f"Internal server error: {e}"
+                    }
+                }
+                write_message(error_response)
+            break
+    
+    logging.info("=== Message loop ended ===")
+
+if __name__ == "__main__":
+    main() 
