@@ -5,7 +5,8 @@
 .cursorignore
 .cursorrules
 
-__pycache__
+**__pycache__**
+*.pyc
 *.p8
 *.pem
 *.crt
