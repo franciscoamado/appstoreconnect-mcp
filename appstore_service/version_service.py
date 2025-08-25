@@ -1,11 +1,22 @@
-from .api_auth import AppStoreConnectAuth
+"""Service for managing App Store Connect app version operations."""
 import requests
+from .api_auth import AppStoreConnectAuth
+
+# Default timeout for all requests (30 seconds)
+REQUEST_TIMEOUT = 30
+
 
 class VersionService:
+    """Service for managing App Store Connect app version operations."""
+
     def __init__(self, auth: AppStoreConnectAuth):
         self.auth = auth
 
-    def create_version(self, app_id: str, version_string: str, platform: str = "IOS"):
+    def create_version(
+            self,
+            app_id: str,
+            version_string: str,
+            platform: str = "IOS"):
         """
         Create a new version for an app.
         """
@@ -27,7 +38,8 @@ class VersionService:
                 }
             }
         }
-        response = requests.post(url, headers=self.auth.headers, json=payload)
+        response = requests.post(
+            url, headers=self.auth.headers, json=payload, timeout=REQUEST_TIMEOUT)
         response.raise_for_status()
         return response.json()
 
@@ -35,8 +47,10 @@ class VersionService:
         """
         Get an app store version by version string.
         """
-        url = f"{self.auth.base_url}/appStoreVersions?filter[app]={app_id}&filter[versionString]={version_string}"
-        response = requests.get(url, headers=self.auth.headers)
+        url = (f"{self.auth.base_url}/appStoreVersions"
+               f"?filter[app]={app_id}&filter[versionString]={version_string}")
+        response = requests.get(
+            url, headers=self.auth.headers, timeout=REQUEST_TIMEOUT)
         response.raise_for_status()
         return response.json()
 
@@ -51,7 +65,8 @@ class VersionService:
                 "id": build_id
             }
         }
-        response = requests.patch(url, headers=self.auth.headers, json=payload)
+        response = requests.patch(
+            url, headers=self.auth.headers, json=payload, timeout=REQUEST_TIMEOUT)
         response.raise_for_status()
         return response.json()
 
@@ -73,7 +88,8 @@ class VersionService:
                 }
             }
         }
-        response = requests.post(url, headers=self.auth.headers, json=payload)
+        response = requests.post(
+            url, headers=self.auth.headers, json=payload, timeout=REQUEST_TIMEOUT)
         response.raise_for_status()
         return response.json()
 
@@ -95,7 +111,8 @@ class VersionService:
                 }
             }
         }
-        response = requests.post(url, headers=self.auth.headers, json=payload)
+        response = requests.post(
+            url, headers=self.auth.headers, json=payload, timeout=REQUEST_TIMEOUT)
         response.raise_for_status()
         return response.json()
 
@@ -104,6 +121,7 @@ class VersionService:
         List all app store versions for an app.
         """
         url = f"{self.auth.base_url}/apps/{app_id}/appStoreVersions"
-        response = requests.get(url, headers=self.auth.headers)
+        response = requests.get(
+            url, headers=self.auth.headers, timeout=REQUEST_TIMEOUT)
         response.raise_for_status()
-        return response.json() 
+        return response.json()

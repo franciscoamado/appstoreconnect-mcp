@@ -1,8 +1,15 @@
+"""Service for retrieving App Store Connect app information and metadata."""
 import requests
 from . import config
 from .api_auth import AppStoreConnectAuth
 
+# Default timeout for all requests (30 seconds)
+REQUEST_TIMEOUT = 30
+
+
 class AppInfoService:
+    """Service for managing App Store Connect app information and metadata operations."""
+
     def __init__(self, auth: AppStoreConnectAuth):
         self.auth = auth
 
@@ -12,7 +19,10 @@ class AppInfoService:
         Endpoint: GET https://api.appstoreconnect.apple.com/v1/apps
         """
         url = f"{self.auth.base_url}/apps"
-        response = requests.get(url, headers=self.auth.headers)
+        response = requests.get(
+            url,
+            headers=self.auth.headers,
+            timeout=REQUEST_TIMEOUT)
         response.raise_for_status()
         return response.json()
 
@@ -22,13 +32,15 @@ class AppInfoService:
         Endpoint: GET https://api.appstoreconnect.apple.com/v1/apps?filter[bundleId]={bundle_id}
         """
         url = f"{self.auth.base_url}/apps?filter[bundleId]={bundle_id}"
-        response = requests.get(url, headers=self.auth.headers)
+        response = requests.get(
+            url,
+            headers=self.auth.headers,
+            timeout=REQUEST_TIMEOUT)
         response.raise_for_status()
         data = response.json()
         if data.get("data"):
             return data["data"][0]
-        else:
-            return {"error": "App not found"}
+        return {"error": "App not found"}
 
     def get_app_id_by_bundle_id(self, bundle_id: str):
         """
@@ -47,7 +59,7 @@ class AppInfoService:
         url = f"{self.auth.base_url}/apps/{app_id}/perfPowerMetrics"
         headers = self.auth.headers.copy()
         headers["Accept"] = "application/vnd.apple.xcode-metrics+json, application/json"
-        response = requests.get(url, headers=headers)
+        response = requests.get(url, headers=headers, timeout=REQUEST_TIMEOUT)
         response.raise_for_status()
         return response.json()
 
@@ -57,29 +69,42 @@ class AppInfoService:
         Endpoint: GET https://api.appstoreconnect.apple.com/v1/apps/{APP_ID}/customerReviews
         """
         url = f"{self.auth.base_url}/apps/{app_id}/customerReviews"
-        response = requests.get(url, headers=self.auth.headers)
+        response = requests.get(
+            url,
+            headers=self.auth.headers,
+            timeout=REQUEST_TIMEOUT)
         response.raise_for_status()
         return response.json()
 
     def get_latest_editable_app_store_version_id(self, app_id: str):
         """
-        Fetches the ID of the latest App Store Version that is in an editable state 
+        Fetches the ID of the latest App Store Version that is in an editable state
         (specifically PREPARE_FOR_SUBMISSION), sorted by version string descending.
         Returns the ID if found, otherwise None.
         """
-        # We filter by PREPARE_FOR_SUBMISSION and sort by versionString descending to get the latest editable version.
-        # limit=1 ensures we only get the top one.
-        url = f"{self.auth.base_url}/apps/{app_id}/appStoreVersions?filter[appStoreState]=PREPARE_FOR_SUBMISSION&sort=-versionString&limit=1"
-        response = requests.get(url, headers=self.auth.headers)
+        # We filter by PREPARE_FOR_SUBMISSION and sort by versionString descending
+        # to get the latest editable version. limit=1 ensures we only get the
+        # top one.
+        url = (f"{self.auth.base_url}/apps/{app_id}/appStoreVersions"
+               f"?filter[appStoreState]=PREPARE_FOR_SUBMISSION"
+               f"&sort=-versionString&limit=1")
+        response = requests.get(
+            url,
+            headers=self.auth.headers,
+            timeout=REQUEST_TIMEOUT)
         response.raise_for_status()
         data = response.json()
         if data.get("data") and len(data["data"]) > 0:
             version_id = data["data"][0]["id"]
             version_string = data["data"][0]["attributes"]["versionString"]
             platform = data["data"][0]["attributes"]["platform"]
-            print(f"Found latest editable App Store Version: ID {version_id}, Version {version_string}, Platform {platform}.")
+            print(
+                f"Found latest editable App Store Version: ID {version_id}, "
+                f"Version {version_string}, Platform {platform}.")
             return version_id
-        else:
-            print(f"No App Store Version found in 'PREPARE_FOR_SUBMISSION' state for app ID {config.APP_ID}.")
-            print("Please ensure there is an app version created in App Store Connect that is ready for build assignment.")
-            return None 
+        print(
+            f"No App Store Version found in 'PREPARE_FOR_SUBMISSION' state "
+            f"for app ID {config.APP_ID}.")
+        print("Please ensure there is an app version created in App Store Connect "
+              "that is ready for build assignment.")
+        return None
