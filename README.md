@@ -97,6 +97,47 @@ The server exposes these MCP tools:
 
 ## Development
 
+### Testing
+
+The project includes comprehensive unit tests for core functionality:
+
+#### Test Structure
+- **`tests/`** - Main test directory
+- **`tests/appstore_service/`** - Tests for service modules
+- **`pytest.ini`** - Pytest configuration
+
+#### Test Files
+- **`test_api_auth.py`** - JWT authentication logic tests
+- **`test_app_info_service.py`** - API service call tests  
+- **`test_app_store_connect_api.py`** - Main API wrapper tests
+
+#### Running Tests
+```bash
+# Install test dependencies (included in requirements.txt)
+pip install -r requirements.txt
+
+# Run all tests
+pytest
+
+# Run with coverage report
+pytest --cov=appstore_service --cov=app_store_connect_api
+
+# Run specific test file with verbose output
+pytest tests/test_app_store_connect_api.py -v
+
+# Run only fast tests (exclude slow/integration tests)
+pytest -m "not slow"
+```
+
+#### Test Coverage
+The test suite covers:
+- **Authentication**: JWT token generation, expiration handling, headers
+- **API Services**: HTTP requests, error handling, response parsing
+- **Business Logic**: Parameter validation, data transformation
+- **Edge Cases**: Missing parameters, empty responses, HTTP errors
+
+Tests use mocking to avoid actual API calls, making them fast and reliable for CI/CD.
+
 ### Testing the Server
 
 Test tool discovery:
