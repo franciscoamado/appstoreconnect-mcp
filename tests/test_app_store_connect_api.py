@@ -1,6 +1,5 @@
 """Unit tests for app_store_connect_api module."""
-import pytest
-from unittest.mock import patch, Mock
+from unittest.mock import patch
 import app_store_connect_api
 
 
